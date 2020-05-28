@@ -8,8 +8,6 @@ from selenium.webdriver.support.expected_conditions import presence_of_element_l
 
 def main():
 
-	#This example requires Selenium WebDriver 3.13 or newer
-
 	results_file  = open("pics.txt", "a")
 
 
