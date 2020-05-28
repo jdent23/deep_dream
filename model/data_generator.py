@@ -59,4 +59,4 @@ class Dataset( data.Dataset ):
 
         y = torch.Tensor( self.labels[ ID ] )
 
-        return img_tensor_cut.permute( 2, 0, 1 ), y
+        return( img_tensor_cut.permute( 2, 0, 1 ).type( torch.FloatTensor ) / 255, y )
