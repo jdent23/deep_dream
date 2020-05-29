@@ -5,3 +5,4 @@
 *.old
 *.pyc
 */runs/*
+*.pt

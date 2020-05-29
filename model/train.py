@@ -13,13 +13,22 @@ def main():
 
 	device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+	allowable_bad_steps = 10
+	PATH = './classifier.pt'
 	model = Classifier().to(device)
-	optimizer = torch.optim.SGD(model.parameters(), lr=0.002, momentum=0.9, weight_decay=1e-4)
+
+	try:
+		model.load_state_dict(torch.load(PATH))
+		print( 'Loading existing model' )
+	except:
+		print( 'Model not found; starting new model' )
+
+	optimizer = torch.optim.SGD(model.parameters(), lr=0.0001, momentum=0.9, weight_decay=1e-4)
 	f_loss = torch.nn.MSELoss(size_average=None, reduce=None, reduction='mean')
 
 	# Parameters
 	image_size = 299
-	params = {'batch_size': 10,
+	params = {'batch_size': 32,
 		'shuffle': True,
 		'num_workers': 6}
 
@@ -37,32 +46,57 @@ def main():
 	testing_set = Dataset( '/home/jasondent/art_telephone/model/data/test' , ['pics','wimmel'], image_size )
 	testing_generator = data.DataLoader(training_set, **params)
 
+
+	lowest_total_loss = -1
+	steps_since_lowest_loss = 0
 	n_iter = -1
-	for epoch in range( 0, 20 ):
+	while( True ):
 		for batch, labels in training_generator:
 			n_iter += 1
 			y = labels[ :, 0 ].reshape( ( -1, 1 ) )
+			del labels
 			batch, y = batch.to(device), y.to(device)
 
-			p_y = model.induction( batch, train=True )
+			model.train()
+			p_y = model( batch, train=True )
+			print(y)
+			print(p_y)
+			del batch
 
 
 			optimizer.zero_grad()
 			loss = f_loss( y, p_y )
+			writer.add_scalar('train/loss', loss, n_iter)
 			loss.backward()
 			optimizer.step()
+			del loss
 
 		total_loss = 0
 		for batch, labels in testing_generator:
 			y = labels[ :, 0 ].reshape( ( -1, 1 ) )
+			del labels
 			batch, y = batch.to(device), y.to(device)
 
-			p_y = model.induction( batch, train=True )
+			model.eval()
+			p_y = model( batch, train=True )
+			del batch
 			loss = f_loss( y, p_y )
-			total_loss += loss
+			total_loss += loss.detach().cpu().item()
+			del loss
 
-		writer.add_scalar('test/loss', np.random.random(), n_iter)
-		print( total_loss )
+		writer.add_scalar('test/loss', total_loss, n_iter)
+		if( ( lowest_total_loss == -1 ) | ( total_loss < lowest_total_loss ) ):
+			print( 'Saving updated model; total_loss = ' + str( total_loss ) )
+			torch.save(model.state_dict(), PATH)
+			steps_since_lowest_loss = 0
+			lowest_total_loss = total_loss
+		else:
+			print( 'Model not improved; total loss = ' + str( total_loss ) )
+			steps_since_lowest_loss += 1
+
+		if( steps_since_lowest_loss > allowable_bad_steps ):
+			print( 'Number of allowable bad steps exceded; total loss of final model: ' + str( lowest_total_loss ) )
+			break
 
 
 if __name__ == '__main__':
