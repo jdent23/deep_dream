@@ -229,6 +229,8 @@ class Classifier( torch.nn.Module ):
 		self.classifier.append( torch.nn.ReLU() )
 		self.classifier.append( torch.nn.Linear( 300, 1, bias=True) )
 
+		self.softmax = torch.nn.Softmax()
+
 	def forward( self, tensor_img, train=False ):
 
 		x = tensor_img
@@ -274,7 +276,7 @@ class Classifier( torch.nn.Module ):
 			x = layer( x )
 
 		if( train == False ):
-			x = torch.nn.Softmax( x ).detach()
+			x = self.softmax( x ).detach()
 
 		return x
 
@@ -309,7 +311,7 @@ class Classifier( torch.nn.Module ):
 			x = layer( x )
 
 		if( train == False ):
-			x = torch.nn.Softmax( x ).detach()
+			x = self.softmax( x ).detach()
 
 		return x
 
