@@ -59,8 +59,6 @@ def main():
 
 			model.train()
 			p_y = model( batch, train=True )
-			print(y)
-			print(p_y)
 			del batch
 
 
@@ -80,6 +78,8 @@ def main():
 			model.eval()
 			p_y = model( batch, train=True )
 			del batch
+			print(y)
+			print(p_y)
 			loss = f_loss( y, p_y )
 			total_loss += loss.detach().cpu().item()
 			del loss

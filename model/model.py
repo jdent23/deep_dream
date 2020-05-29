@@ -118,5 +118,7 @@ class Classifier( torch.nn.Module ):
 
 		return x
 
-	def get_reduced_loss_image( in_img_tensor, example_img_tensor, blocks_deep=len(self.channels), f_loss ):
+	def get_reduced_loss_image( in_img_tensor, example_img_tensor, f_loss, blocks_deep=None ):
+		if( blocks_deep == None ):
+			blocks_deep = len(self.channels)
 		pass
