@@ -11,20 +11,20 @@ def main():
 
 	writer = SummaryWriter()
 
-	device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+	device = torch.device( "cuda:0" if torch.cuda.is_available() else "cpu" )
 
 	allowable_bad_steps = 10
 	PATH = './classifier.pt'
-	model = Classifier().to(device)
+	model = Classifier().to( device )
 
 	try:
-		model.load_state_dict(torch.load(PATH))
+		model.load_state_dict( torch.load( PATH ) )
 		print( 'Loading existing model' )
 	except:
 		print( 'Model not found; starting new model' )
 
-	optimizer = torch.optim.SGD(model.parameters(), lr=0.0001, momentum=0.9, weight_decay=1e-4)
-	f_loss = torch.nn.MSELoss(size_average=None, reduce=None, reduction='mean')
+	optimizer = torch.optim.SGD( model.parameters(), lr=0.0001, momentum=0.9, weight_decay=1e-4 )
+	f_loss = torch.nn.MSELoss( size_average=None, reduce=None, reduction='mean' )
 
 	# Parameters
 	image_size = 299
@@ -37,9 +37,7 @@ def main():
 		transforms.RandomVerticalFlip(),\
 		transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.2)\
 	])
-
-
-
+	
 	training_set = Dataset( '/home/jasondent/art_telephone/model/data/train' , ['pics','wimmel'], image_size )
 	training_generator = data.DataLoader(training_set, **params)
 

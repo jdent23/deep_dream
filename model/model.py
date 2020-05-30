@@ -84,7 +84,7 @@ class Classifier( torch.nn.Module ):
 		self.classifier.append( torch.nn.Dropout( p=self.dropout ) )
 		self.classifier.append( torch.nn.Linear( 1600, 1, bias=True) )
 
-		self.softmax = torch.nn.Softmax()
+		self.sigmoid = torch.nn.Sigmoid()
 
 	def forward( self, tensor_img, train=False ):
 
@@ -114,7 +114,9 @@ class Classifier( torch.nn.Module ):
 			x = layer( x )
 
 		if( train == False ):
-			x = self.softmax( x ).detach()
+			print(x)
+			x = self.sigmoid( x ).detach()
+			print(x)
 
 		return x
 
