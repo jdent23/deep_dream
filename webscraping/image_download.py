@@ -31,8 +31,8 @@ def main(args):
 
 if __name__ == "__main__":
 
-	parser = argparse.ArgumentParser(description='Download the url, if applicable')
-	parser.add_argument('--link', type=str, help='a url pointing to a png or jpg to be downloaded')
-	parser.add_argument('--destination', type=str, help='location to download the file to')
+	parser = argparse.ArgumentParser( description='Download the url, if applicable' )
+	parser.add_argument( '--link', type=str, help='a url pointing to a png or jpg to be downloaded' )
+	parser.add_argument( '--destination', type=str, help='location to download the file to' )
 	args = parser.parse_args()
-	main(args)
+	main( args )

@@ -86,7 +86,9 @@ class Classifier( torch.nn.Module ):
 
 		self.sigmoid = torch.nn.Sigmoid()
 
-	def forward( self, tensor_img, train=False ):
+	def forward( self, tensor_img, train=False, blocks_deep=None ):
+		if( blocks_deep == None ):
+			blocks_deep = -1
 
 		x = tensor_img
 		residual = x
@@ -104,6 +106,9 @@ class Classifier( torch.nn.Module ):
 			x = self.L[ layer ]( x )
 			x = self.relu( x )
 
+			if( layer / self.block_layers == blocks_deep ):
+				return( x )
+
 		residual = self.L_residual[ int( ( ( layer+1 )/self.block_layers ) - 1 ) ]( residual )
 		residual = self.relu( residual )
 		x += residual
@@ -114,13 +119,7 @@ class Classifier( torch.nn.Module ):
 			x = layer( x )
 
 		if( train == False ):
-			print(x)
 			x = self.sigmoid( x ).detach()
-			print(x)
 
 		return x
 
-	def get_reduced_loss_image( in_img_tensor, example_img_tensor, f_loss, blocks_deep=None ):
-		if( blocks_deep == None ):
-			blocks_deep = len(self.channels)
-		pass
