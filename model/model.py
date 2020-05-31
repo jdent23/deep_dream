@@ -40,6 +40,7 @@ class Classifier( torch.nn.Module ):
 	def __init__( self ):
 		super().__init__()
 
+		self.image_size = 299
 		self.dropout = 0.5
 		self.channels = [ 16, 32, 32, 64, 64, 128 ]
 		self.block_layers = 2
