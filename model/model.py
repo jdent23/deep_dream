@@ -1,4 +1,8 @@
 import torch
+import tensor_utils as utils
+
+def dream_loss( model_output ):
+	return( torch.sum( model_output*(-1) ) )
 
 class Xception( torch.nn.Module ):
 	def __init__( self, in_channels, out_channels ):
@@ -43,6 +47,7 @@ class Classifier( torch.nn.Module ):
 		self.image_size = 299
 		self.dropout = 0.5
 		self.channels = [ 16, 32, 32, 64, 64, 128 ]
+		self.preferred_lr = [ 0, 0, 0, 0, 0, 0.1 ]
 		self.block_layers = 2
 		self.L = torch.nn.ModuleList( [] )
 		self.L_residual = torch.nn.ModuleList( [] )
@@ -87,9 +92,8 @@ class Classifier( torch.nn.Module ):
 
 		self.sigmoid = torch.nn.Sigmoid()
 
-	def forward( self, tensor_img, train=False, blocks_deep=None ):
-		if( blocks_deep == None ):
-			blocks_deep = -1
+	def forward( self, tensor_img, train=False,\
+		device=torch.device( "cuda:0" if torch.cuda.is_available() else "cpu" )):
 
 		x = tensor_img
 		residual = x
@@ -123,4 +127,31 @@ class Classifier( torch.nn.Module ):
 			x = self.sigmoid( x ).detach()
 
 		return x
+
+	def dream( self, tensor_img, block=6 ):
+
+		if( tensor_img.shape[ 0 ] != 1 ):
+			raise Exception( "Expected a tensor of only one image with dimensions[ 1, rgb, height, width ]" )
+		if( tensor_img.shape[ 1 ] != 3 ):
+			raise Exception( 'Expected tensor_img to have rgb channels only' )
+
+		for color_channel in range( 0, 3 ):
+			tensor_channel = tensor_img[ 0, color_channel, :, : ]
+			input_tensor = tensor_channel[None, None, :, :].repeat( 1,\
+				self.L[ ( block - 1 )*self.block_layers ].state_dict()[ 'L.0.weight' ].shape[ 1 ],\
+				1,\
+				1\
+			).detach().requires_grad_( True )
+			x = input_tensor
+
+			for layer in range( ( block - 1 )*self.block_layers, block*self.block_layers-1 ):
+				x = self.L[ layer ]( x )
+
+			loss = dream_loss( x )
+			loss.backward()
+			gradient = input_tensor.grad
+			gradient = utils.normalize_tensor( gradient )
+			tensor_img[ 0, color_channel, :, : ] = torch.mean( gradient, ( 0, 1 ) )
+
+		return( tensor_img )
 
