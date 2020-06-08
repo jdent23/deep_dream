@@ -128,7 +128,7 @@ class Classifier( torch.nn.Module ):
 
 		return x
 
-	def dream( self, tensor_img, block=6 ):
+	def dream( self, tensor_img, block=3 ):
 
 		if( tensor_img.shape[ 0 ] != 1 ):
 			raise Exception( "Expected a tensor of only one image with dimensions[ 1, rgb, height, width ]" )
@@ -141,7 +141,7 @@ class Classifier( torch.nn.Module ):
 				self.L[ ( block - 1 )*self.block_layers ].state_dict()[ 'L.0.weight' ].shape[ 1 ],\
 				1,\
 				1\
-			).detach().requires_grad_( True )
+			).clone().detach().requires_grad_( True )
 			x = input_tensor
 
 			for layer in range( ( block - 1 )*self.block_layers, block*self.block_layers-1 ):
@@ -149,8 +149,10 @@ class Classifier( torch.nn.Module ):
 
 			loss = dream_loss( x )
 			loss.backward()
+			print( input_tensor.grad )
 			gradient = input_tensor.grad
 			gradient = utils.normalize_tensor( gradient )
+			utils.show_tensor( gradient[0, 0:3, :, : ] )
 			tensor_img[ 0, color_channel, :, : ] = torch.mean( gradient, ( 0, 1 ) )
 
 		return( tensor_img )

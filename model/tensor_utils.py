@@ -19,6 +19,4 @@ def show_tensor( input_tensor ):
 	cv2.destroyAllWindows()
 
 def normalize_tensor( tensor ):
-	print( torch.max( tensor ) )
-	print( torch.min( tensor ) )
 	return( ( tensor - torch.min( tensor ) ) / ( torch.max( tensor ) - torch.min( tensor ) ) )
