@@ -14,14 +14,12 @@ def show_tensor( input_tensor ):
 	cv2.waitKey(0) & 0xFF
 	cv2.destroyAllWindows()
 
-def classize_image( input_tensor, example_tensor, model, iterations, blocks_deep=None ):
+def classize_image( input_tensor_img, example_tensor, model, iterations, blocks_deep=None ):
 
-	input_tensor = input_tensor.repeat( example_tensor.shape[0], 1, 1, 1 )
+	device = torch.device( "cuda:0" if torch.cuda.is_available() else "cpu" )
+	input_tensor = input_tensor_img.repeat( example_tensor.shape[0], 1, 1, 1 ).to( device )
 
-	optimizer = torch.optim.SGD( model.parameters(), lr=0.0001, momentum=0.9, weight_decay=1e-4 )
 	f_loss = torch.nn.MSELoss( size_average=None, reduce=None, reduction='mean' )
-
-	x = model( example_tensor, blocks_deep=blocks_deep )
 
 	input_tensor = torch.nn.functional.pad(\
 		input_tensor,\
@@ -30,40 +28,67 @@ def classize_image( input_tensor, example_tensor, model, iterations, blocks_deep
 		value=0\
 	)
 
-	num_tiles = ( ( math.ceil( input_tensor.shape[ 2 ] / model.image_size )-1 ),\
-				( math.ceil( input_tensor.shape[ 3 ] / model.image_size )-1 ) )
-	jitter = ( math.floor( model.image_size * random.random() ),\
-				math.floor( model.image_size * random.random() ) )
 
-	for x_tile in range( 0, num_tiles[ 0 ] ):
-		for y_tile in range( 0, num_tiles[ 1 ] ):
-					tile = input_tensor[\
-						:,\
-						:,\
-						x_tile*model.image_size+jitter[0]:(x_tile+1)*model.image_size+jitter[0],\
-						y_tile*model.image_size+jitter[1]:(y_tile+1)*model.image_size+jitter[1]\
-					]
+
+	for iter in range( 0, iterations ):
+
+		jitter = ( math.floor( model.image_size * random.random() ),\
+			math.floor( model.image_size * random.random() ) )
+		num_tiles = ( ( math.ceil( ( input_tensor.shape[ 2 ] - jitter[ 0 ] ) / model.image_size )-1 ),\
+			( ( math.ceil( ( input_tensor.shape[ 3 ] - jitter[ 1 ] ) / model.image_size )-1 ) ) )
+		for x_tile in range( 0, num_tiles[ 0 ] ):
+			for y_tile in range( 0, num_tiles[ 1 ] ):
+				tile = input_tensor[\
+					:,\
+					:,\
+					x_tile*model.image_size+jitter[0]:(x_tile+1)*model.image_size+jitter[0],\
+					y_tile*model.image_size+jitter[1]:(y_tile+1)*model.image_size+jitter[1]\
+				].requires_grad_(True)
+				optimizer = torch.optim.SGD( [ tile ], lr=10, momentum=0.9, weight_decay=1e-4 )
+				original_tile = tile
+
+				if( ( tile.shape[ 2 ] != 299 ) | ( tile.shape[ 3 ] != 299 ) ):
 					print(tile.shape)
-					print(input_tensor.shape)
+					print(x_tile)
+					print(y_tile)
 					print((x_tile+1)*model.image_size+jitter[0])
 					print((y_tile+1)*model.image_size+jitter[1])
+					show_tensor( tile[0] )
+
+				target_output = model( example_tensor, train=True, blocks_deep=blocks_deep )
+				real_output = model( tile, train=True, blocks_deep=blocks_deep )
+
+				optimizer.zero_grad()
+				loss = f_loss( target_output, real_output )
+				#loss = torch.sum( torch.abs( tile - example_tensor ) )
+				loss.backward()
+				optimizer.step()
+
+				input_tensor[\
+					:,\
+					:,\
+					x_tile*model.image_size+jitter[0]:(x_tile+1)*model.image_size+jitter[0],\
+					y_tile*model.image_size+jitter[1]:(y_tile+1)*model.image_size+jitter[1]\
+				] = tile.detach()
+
+	show_tensor( input_tensor.mean( 0 ) )
 
 def main( args ):
 
 	if( args.image == None ):
 		raise Exception( '--image argument required' )
 	if( args.iterations == None ):
-		args.iterations = 1
+		args.iterations = 1000
 
 	device = torch.device( "cuda:0" if torch.cuda.is_available() else "cpu" )
-	model = Classifier().to( device )
+	model = Classifier()
 
 	try:
 		model.load_state_dict( torch.load( './classifier.pt' ) )
 		print( 'Loading existing model' )
 	except:
 		raise Exception( 'Model not found' )
-	model.eval()
+	model = model.to( device )
 
 	params = {'batch_size': 4,
 		'shuffle': True,
@@ -78,7 +103,7 @@ def main( args ):
 	for batch, labels in data_generator:
 		del labels
 		batch = batch.to( device )
-		classize_image( img_tensor, batch, model, args.iterations )
+		classize_image( img_tensor, batch, model, args.iterations, blocks_deep=6 )
 
 
 if __name__ == '__main__':
