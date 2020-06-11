@@ -2,8 +2,8 @@
 
 import torch
 from torch.utils import data
-from data_generator import Dataset
-from model import Classifier
+from deep_dream.classifier.data_generator import Dataset
+from deep_dream.classifier.model import Classifier
 from torch.utils.tensorboard import SummaryWriter
 from torchvision import transforms
 

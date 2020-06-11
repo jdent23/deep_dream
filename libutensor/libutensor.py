@@ -1,11 +1,5 @@
 import torch
-from torch.utils import data
-from data_generator import Dataset
 import cv2
-import argparse
-import random
-import math
-import sys
 
 def image_to_tensor( input_image ):
 	return( torch.from_numpy( input_image ).permute( 2, 0, 1 )[ None, :, :, : ].type( torch.FloatTensor ) / 255 )
@@ -20,3 +14,9 @@ def show_tensor( input_tensor ):
 
 def normalize_tensor( tensor ):
 	return( ( tensor - torch.min( tensor ) ) / ( torch.max( tensor ) - torch.min( tensor ) ) )
+
+def standardize_tensor( tensor ):
+	return( ( tensor - torch.mean( tensor ) ) / torch.std( tensor ) )
+
+def dream_loss( model_output ):
+	return( torch.sum( model_output*(-1) ) )
