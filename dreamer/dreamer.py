@@ -6,84 +6,97 @@ import deep_dream.libutensor as utils
 import torchvision.models
 import math
 import random
+import copy
+import cv2
+import numpy as np
 
 class Dreamer:
 	def __init__( self ):
 		self.device = torch.device( "cuda:0" if torch.cuda.is_available() else "cpu" )
 		self.model = torchvision.models.inception_v3().to( self.device )
 		self.tile_size = 500
+		self.resolution_ratio = 0.8
+		self.iterations = 20
+		self.grad_affect = 0.005
+
+	def get_octaves( self, image_shape ):
+		remaining_dimensions = [ image_shape[ 0 ], image_shape[ 1 ] ]
+		octaves = []
+		while( True ):
+			if( ( remaining_dimensions[ 0 ] > self.tile_size ) & ( remaining_dimensions[ 1 ] > self.tile_size ) ):
+				octaves.append( copy.copy( remaining_dimensions ) )
+				remaining_dimensions[ 0 ] = math.floor( remaining_dimensions[ 0 ] * self.resolution_ratio )
+				remaining_dimensions[ 1 ] = math.floor( remaining_dimensions[ 1 ] * self.resolution_ratio )
+			else:
+				break
+		return( octaves )
 
 	def get_gradient( self, tile ):
 
-		for color_channel in range( 0, 3 ): # self.model.Mixed_7c.branch3x3_1.conv.state_dict()[ 'weight' ].shape[ 1 ]
-			tensor_channel = tile[ 0, color_channel, :, : ]
-			input_tensor = tensor_channel[None, None, :, :].repeat( 1,\
-				3,\
-				1,\
-				1\
-			).clone().detach().requires_grad_( True )
-			x = input_tensor
-			x = self.model(x) #.Mixed_7c.branch3x3_1.conv( x )
-			print(x)
-			loss = utils.dream_loss( x.logits.to( self.device ) ).cpu()
-			loss.backward()
-			gradient = input_tensor.grad
-			gradient = utils.standardize_tensor( gradient )
-			tile[ 0, color_channel, :, : ] = torch.mean( gradient, ( 0, 1 ) )
-		print(torch.max(tile))
-		print(torch.min(tile))
-		utils.show_tensor(torch.abs(tile[0])*12)
 
-		return( tile )
+		input_tensor = tile.clone().detach().requires_grad_( True )
+		x = input_tensor
+		y = self.model(x) #.Mixed_7c.branch3x3_1.conv( x )
+		loss = utils.dream_loss( y.logits.to( self.device ) ).cpu()
+		loss.backward()
+		gradient = input_tensor.grad
+		gradient = utils.standardize_tensor( gradient )
 
-	def dream( self, input_img, iterations=1 ):
+		return( gradient )
 
-		gradient_affect = 0.2
+	def dream( self, input_img ):
 
-		img_tensor = utils.image_to_tensor( input_img ).to( self.device )
-		img_tensor = torch.nn.functional.pad(\
-			img_tensor,\
-			( self.tile_size-1, self.tile_size-1, self.tile_size-1, self.tile_size-1 ),\
-			mode='constant',\
-			value=0\
-		)
+		input_img = utils.normalize_image( input_img )
+		octaves = self.get_octaves( input_img.shape )
+		output_img = input_img
+		for iter in range( 0, self.iterations ):
 
-		for iter in range( 0, iterations ):
-
-			jitter = ( math.floor( self.tile_size * random.random() ),\
-					math.floor( self.tile_size * random.random() ) )
-			num_tiles = ( ( math.ceil( ( img_tensor.shape[ 2 ] - jitter[ 0 ] ) / self.tile_size )-1 ),\
-					( ( math.ceil( ( img_tensor.shape[ 3 ] - jitter[ 1 ] ) / self.tile_size )-1 ) ) )
-
-			for x_tile in range( 0, num_tiles[ 0 ] ):
-				for y_tile in range( 0, num_tiles[ 1 ] ):
-					tile = img_tensor[\
-						:,\
-						:,\
-						x_tile*self.tile_size+jitter[0]:(x_tile+1)*self.tile_size+jitter[0],\
-						y_tile*self.tile_size+jitter[1]:(y_tile+1)*self.tile_size+jitter[1]\
-					]
-					original_tile = tile
-
-					if( ( tile.shape[ 2 ] != 299 ) | ( tile.shape[ 3 ] != 299 ) ):
-						print(tile.shape)
-						print(x_tile)
-						print(y_tile)
-						print((x_tile+1)*self.tile_size+jitter[0])
-						print((y_tile+1)*self.tile_size+jitter[1])
-						utils.show_tensor( tile[0] )
-
-					gradient = self.get_gradient( tile )
-
-					img_tensor[\
-						:,\
-						:,\
-						x_tile*self.tile_size+jitter[0]:(x_tile+1)*self.tile_size+jitter[0],\
-						y_tile*self.tile_size+jitter[1]:(y_tile+1)*self.tile_size+jitter[1]\
-					] += gradient.detach()
+			for octave in octaves:
+				input_img = cv2.resize( output_img, tuple( [octave[ 1 ], octave[ 0 ]] ), interpolation = cv2.INTER_AREA)
+				img_tensor = utils.image_to_tensor( input_img ).to( self.device )
+				img_tensor = torch.nn.functional.pad(\
+					img_tensor,\
+					( self.tile_size-1, self.tile_size-1, self.tile_size-1, self.tile_size-1 ),\
+					mode='constant',\
+					value=0\
+				)
 
 
-		#utils.show_tensor( input_tensor.mean( 0 ) )
+				jitter = ( math.floor( self.tile_size * random.random() ),\
+						math.floor( self.tile_size * random.random() ) )
+				num_tiles = ( ( math.ceil( ( img_tensor.shape[ 2 ] - jitter[ 0 ] ) / self.tile_size )-1 ),\
+						( ( math.ceil( ( img_tensor.shape[ 3 ] - jitter[ 1 ] ) / self.tile_size )-1 ) ) )
+
+				for x_tile in range( 0, num_tiles[ 0 ] ):
+					for y_tile in range( 0, num_tiles[ 1 ] ):
+						tile = img_tensor[\
+							:,\
+							:,\
+							x_tile*self.tile_size+jitter[0]:(x_tile+1)*self.tile_size+jitter[0],\
+							y_tile*self.tile_size+jitter[1]:(y_tile+1)*self.tile_size+jitter[1]\
+						]
+
+						gradient = self.get_gradient( tile.clone() )
+
+						img_tensor[\
+							:,\
+							:,\
+							x_tile*self.tile_size+jitter[0]:(x_tile+1)*self.tile_size+jitter[0],\
+							y_tile*self.tile_size+jitter[1]:(y_tile+1)*self.tile_size+jitter[1]\
+						] = gradient.detach()
+
+						#print('tile_max: ' + str( torch.max( tile ).item() ) + '\t' + 'tile_min: ' + str( torch.min( tile ).item() ) )
+						#print('grad_max: ' + str( torch.max( gradient ).item() ) + '\t' + 'grad_min: ' + str( torch.min( gradient ).item() ) )
+
+				img_tensor = img_tensor[ :, :, self.tile_size-1:self.tile_size*(-1)+1, self.tile_size-1:self.tile_size*(-1)+1 ]
+				rescaled_output = cv2.resize(\
+					utils.tensor_to_image( img_tensor[ 0 ] ),\
+					tuple( [octaves[ 0 ][ 1 ], octaves[ 0 ][ 0 ]] ),\
+					interpolation = cv2.INTER_AREA\
+				)
+				output_img = output_img * ( 1 - self.grad_affect ) + rescaled_output * self.grad_affect
+				output_img = utils.normalize_image( output_img )
+			utils.show_image( output_img )
 
 
 def main( args ):
