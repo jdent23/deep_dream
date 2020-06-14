@@ -8,6 +8,7 @@ import random
 import math
 import torchvision.models
 import deep_dream.dreamer
+import numpy as np
 
 def main( args ):
 

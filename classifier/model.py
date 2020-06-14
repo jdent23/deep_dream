@@ -91,8 +91,7 @@ class Classifier( torch.nn.Module ):
 
 		self.sigmoid = torch.nn.Sigmoid()
 
-	def forward( self, tensor_img, train=False,\
-		device=torch.device( "cuda:0" if torch.cuda.is_available() else "cpu" )):
+	def forward( self, tensor_img, train=False ):
 
 		x = tensor_img
 		residual = x
@@ -127,3 +126,33 @@ class Classifier( torch.nn.Module ):
 
 		return x
 
+	def gradient_loss( self, tensor ):
+		return( torch.sum( tensor*(-1) ) )
+
+	def get_layer_gradient( self, tensor_tile, block=None ):
+		tensor_tile = tensor_tile.clone().detach().requires_grad_( True )
+		x = tensor_tile
+		residual = x
+
+		block_counter = 0
+		for layer in range( 0, len( self.L ) ):
+			if( ( layer % self.block_layers == 0 ) & ( layer != 0 ) ):
+				residual = self.L_residual[ int( ( layer/self.block_layers ) - 1 ) ]( residual )
+				residual = self.relu( residual )
+
+				x += residual
+				x = self.max_pool( x )
+				block_counter += 1
+			if( layer % self.block_layers == 0 ):
+				residual = x
+				if( layer / self.block_layers == block ):
+					break
+
+			x = self.L[ layer ]( x )
+			x = self.relu( x )
+
+		loss = self.gradient_loss( x )
+		loss.backward()
+		gradient = tensor_tile.grad
+
+		return gradient
