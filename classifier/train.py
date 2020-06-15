@@ -38,8 +38,13 @@ def main():
 		transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.2)\
 	])
 	
-	training_set = Dataset( '/home/jasondent/art_telephone/model/data/train' , ['pics','wimmel'], image_size )
-	training_generator = data.DataLoader(training_set, **params)
+	imagenet_data = torchvision.datasets.ImageNet('path/to/imagenet_root/')
+	data_loader = torch.utils.data.DataLoader(
+		imagenet_data,
+		batch_size=4,
+		shuffle=True,
+		num_workers=6
+	)
 
 	testing_set = Dataset( '/home/jasondent/art_telephone/model/data/test' , ['pics','wimmel'], image_size )
 	testing_generator = data.DataLoader(training_set, **params)
