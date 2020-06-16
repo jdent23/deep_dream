@@ -34,3 +34,7 @@ def show_tensor( input_tensor ):
 	cv2.imshow('image', tensor_to_image( input_tensor ) )
 	cv2.waitKey(0) & 0xFF
 	cv2.destroyAllWindows()
+
+def save_image( img, filepath ):
+	img = normalize_image( img ) * 255
+	cv2.imwrite(filepath, img)

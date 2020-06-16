@@ -20,6 +20,7 @@ class Dreamer:
 		self.tile_crop_margin = 17
 		self.resolution_ratio = 0.8
 		self.iterations = 30
+		self.grad_effect = 0.0002
 
 	def get_octaves( self, image_shape ):
 		remaining_dimensions = [ image_shape[ 0 ], image_shape[ 1 ] ]
@@ -160,9 +161,9 @@ class Dreamer:
 		for iter in range( 0, self.iterations ):
 			img_gradient = self.get_image_gradient( input_img.copy(), block )
 			img_gradient = np.float32(img_gradient)
-			input_img += img_gradient * 0.0005
+			input_img += img_gradient * self.grad_effect
 			input_img = utils.normalize_image( input_img )
-		utils.show_image( utils.normalize_image( input_img.copy() ) )
+		return( input_img )
 
 
 def main( args ):
