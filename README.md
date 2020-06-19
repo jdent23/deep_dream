@@ -1,14 +1,9 @@
 # Deep Dream for PyTorch
 
 * [Classifier](#classifier)
-    - [deep_dream.classifier.train](#deep-dreamclassifiertrain)
 * [Dreamer](#dreamer)
-    - [deep_dream.dreamer.classize_image](#deep-dreamdreamerclassize-image)
-    - [deep_dream.dreamer.fractal_dream](#deep-dreamdreamerfractal-dream)
 * [Libutensor](#libutensor)
 * [Reddit Scrapping](#reddit-scrapping)
-    - [deep_dream.reddit_scrapping.reddit_scrape](#deep-dreamreddit-scrappingreddit-scrape)
-    - [deep_dream.reddit_scrapping.image_download](#deep-dreamreddit-scrappingimage-download)
 
 ## Classifier
 
@@ -62,7 +57,14 @@ python3 -m deep_dream.dreamer.fractal_dream --image <path_to_image>
 ```
 
 - Outputs a series of images that can be easily turned into a mesmerizing video
+
 - Each frame is slightly changed through gradient ascent and slightly zoomed in compared to the previous frame
+
+- Check out the results on YouTube; this 45 second - long video required 4 days of processing
+
+  https://youtu.be/idJPhatp8Cg
+
+  
 
 ## Libutensor
 
