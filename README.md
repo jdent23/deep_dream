@@ -1,14 +1,9 @@
 # Deep Dream for PyTorch
 
 * [Classifier](#classifier)
-    - [deep_dream.classifier.train](#deep-dreamclassifiertrain)
 * [Dreamer](#dreamer)
-    - [deep_dream.dreamer.classize_image](#deep-dreamdreamerclassize-image)
-    - [deep_dream.dreamer.fractal_dream](#deep-dreamdreamerfractal-dream)
 * [Libutensor](#libutensor)
 * [Reddit Scrapping](#reddit-scrapping)
-    - [deep_dream.reddit_scrapping.reddit_scrape](#deep-dreamreddit-scrappingreddit-scrape)
-    - [deep_dream.reddit_scrapping.image_download](#deep-dreamreddit-scrappingimage-download)
 
 ## Classifier
 
