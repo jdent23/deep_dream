@@ -1,4 +1,6 @@
 #!/usr/bin/python3
+# rename -e 's/\d+/sprintf("%05d",$&)/e' -- *.png
+# ffmpeg -framerate 60 -pattern_type glob -i '*.png' -c:v libx264 -r 30 -pix_fmt yuv420p out.mp4
 
 import torch
 from torch.utils import data
